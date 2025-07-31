@@ -191,10 +191,15 @@ export class InventoryCalculator {
 
     // Calculate total stocks
     const totalTargetStock = cycleStock + targetSafetyStock + inTransitStock;
-    const totalActualStock = cycleStock + safetyStock + inTransitStock;
+    const totalActualStock = item.currentStock !== undefined && item.currentStock !== null 
+      ? item.currentStock 
+      : 0;
 
     // Calculate savings potential (current vs optimized)
-    const currentInventoryValue = item.currentStock || totalActualStock;
+    // Use currentStock from Excel file directly, don't fall back to calculated values
+    const currentInventoryValue = item.currentStock !== undefined && item.currentStock !== null 
+      ? item.currentStock 
+      : 0;
     const savingsPotential = Math.max(0, (currentInventoryValue - totalTargetStock) * unitCost);
 
       return {
