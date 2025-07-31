@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { parseExcelFile, validateInputData } from '@/utils/excelParser';
 import { globalStore } from '@/lib/globalStore';
+import { sessionStore } from '@/lib/sessionStore';
 
 export async function POST(request: NextRequest) {
   try {
@@ -41,14 +42,17 @@ export async function POST(request: NextRequest) {
         );
       }
       
-      // Store data in global store
+      // Store data in both stores for maximum compatibility
       globalStore.setData(parsedData);
-      console.log(`✅ Stored ${parsedData.length} items in global store`);
+      sessionStore.setData(parsedData);
+      console.log(`✅ Stored ${parsedData.length} items in both stores`);
       
       return NextResponse.json({
         message: 'File uploaded and processed successfully',
         rowCount: parsedData.length,
-        preview: parsedData.slice(0, 5) // Return first 5 rows as preview
+        preview: parsedData.slice(0, 5), // Return first 5 rows as preview
+        hasData: true,
+        data: parsedData // Include full data for frontend caching
       });
       
     } catch (parseError) {

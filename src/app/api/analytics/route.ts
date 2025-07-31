@@ -2,23 +2,36 @@ import { NextRequest, NextResponse } from 'next/server';
 import { InventoryCalculator } from '@/utils/calculationEngine';
 import { ExcelMatchingCalculator } from '@/utils/excelMatchingCalculator';
 import { globalStore } from '@/lib/globalStore';
+import { sessionStore } from '@/lib/sessionStore';
 
 export async function GET() {
   try {
-    // Check if we have data
-    const uploadedData = globalStore.getData();
-    console.log(`🔍 Analytics: Checking data - found ${uploadedData.length} items`);
+    // Check if we have data - try both stores
+    let uploadedData = sessionStore.getData();
+    console.log(`🔍 Analytics: SessionStore found ${uploadedData.length} items`);
     
     if (uploadedData.length === 0) {
-      console.log('❌ Analytics: No data available');
+      // Fallback to global store
+      uploadedData = globalStore.getData();
+      console.log(`🔍 Analytics: GlobalStore found ${uploadedData.length} items`);
+    }
+    
+    if (uploadedData.length === 0) {
+      console.log('❌ Analytics: No data available in any store');
+      const status = sessionStore.getStatus();
       return NextResponse.json({
         error: 'No data available. Please upload data first.',
-        hasData: false
+        hasData: false,
+        debug: {
+          sessionStore: status,
+          globalStore: globalStore.getStatus()
+        }
       }, { status: 400 });
     }
 
-    // Get current config
-    const currentConfig = globalStore.getConfig();
+    // Get current config - try session store first
+    let currentConfig = sessionStore.getConfig();
+    console.log('✅ Analytics: Config loaded from session store');
     console.log('✅ Analytics: Config loaded, starting calculations...');
 
     // Create Excel-matching calculator
@@ -84,20 +97,27 @@ export async function POST(request: NextRequest) {
     
     if (body.config) {
       globalStore.setConfig(body.config);
+      sessionStore.setConfig(body.config);
+      console.log('✅ Analytics POST: Config updated in both stores');
     }
     
     if (body.data) {
       globalStore.setData(body.data);
+      sessionStore.setData(body.data);
+      console.log(`✅ Analytics POST: Data updated in both stores (${body.data.length} items)`);
     }
 
     return NextResponse.json({ 
       message: 'Data updated successfully',
-      hasData: globalStore.hasData()
+      hasData: sessionStore.hasData(),
+      itemCount: sessionStore.getData().length
     });
 
   } catch (error) {
+    console.error('Analytics POST error:', error);
     return NextResponse.json({
-      error: 'Failed to update data'
+      error: 'Failed to update data',
+      details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 400 });
   }
 }

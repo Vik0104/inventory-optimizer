@@ -10,6 +10,8 @@ interface UploadResponse {
   preview?: any[];
   error?: string;
   details?: string[];
+  hasData?: boolean;
+  data?: any[];
 }
 
 export default function UploadPage() {
@@ -59,6 +61,26 @@ export default function UploadPage() {
 
       const result: UploadResponse = await response.json();
       setUploadResult(result);
+      
+      // If upload was successful and we have data, also pass it to analytics API
+      if (result.hasData && result.data) {
+        console.log(`🔄 Passing ${result.data.length} items to analytics API...`);
+        try {
+          await fetch('/api/analytics', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              data: result.data
+            }),
+          });
+          console.log('✅ Data successfully passed to analytics API');
+        } catch (analyticsError) {
+          console.warn('⚠️ Failed to pass data to analytics API:', analyticsError);
+          // Don't fail the upload because of this
+        }
+      }
     } catch (error) {
       setUploadResult({
         error: 'Failed to upload file. Please try again.'
