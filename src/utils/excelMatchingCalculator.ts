@@ -114,8 +114,10 @@ export class ExcelMatchingCalculator {
     const transitStockUnits = item.transitIncluded === 'yes' ? avgDemandInLeadTime : 0;
     
     // Total actual stock (units) - Column BF
-    const totalActualStockUnits = item.currentStock || 
-      (cycleStockUnits + safetyStockUnits + transitStockUnits);
+    // Use currentStock from Excel file directly, don't fall back to calculated values
+    const totalActualStockUnits = item.currentStock !== undefined && item.currentStock !== null 
+      ? item.currentStock 
+      : 0;
     
     // Total target stock (units) - Column BJ
     const totalTargetStockUnits = cycleStockUnits + safetyStockUnits + transitStockUnits;
